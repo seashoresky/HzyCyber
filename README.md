@@ -7,9 +7,6 @@ yarn dev
 ## 文件夹说明
 server 在 `./pages/api`目录下 
 client 入口在`./pages/index.js`
-
-有两个branch，对应socket_version和database_version
-
 感觉Next.js同时写前后端的好处就是前后端域名相同，不用处理跨域
 ## 技术栈
 ~~Google + Youtube +Documentation +  StackOverflow~~
