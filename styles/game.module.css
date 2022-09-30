@@ -1,0 +1,4 @@
+#bgimp {
+    background-image: url('../static/BG.jpeg') !important;
+    background-size: cover;
+}

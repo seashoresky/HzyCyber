@@ -9,12 +9,25 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "antd": "^4.23.2",
+    "axios": "^0.27.2",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.6.2",
     "next": "12.3.1",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "react-hook-form": "^7.36.1",
+    "socket.io": "^4.5.2",
+    "socket.io-client": "^4.5.2",
+    "sql-template-strings": "^2.2.2",
+    "sqlite": "^4.1.2",
+    "sqlite3": "^5.1.1"
   },
   "devDependencies": {
+    "autoprefixer": "^10.4.12",
     "eslint": "8.24.0",
-    "eslint-config-next": "12.3.1"
+    "eslint-config-next": "12.3.1",
+    "postcss": "^8.4.16",
+    "tailwindcss": "^3.1.8"
   }
 }
