@@ -1,66 +1,66 @@
-import io from "socket.io-client";
 import Head from 'next/head'
 import { useForm } from 'react-hook-form'
+import axios from 'axios'
 import { useEffect, useState } from 'react'
+import { Button, Modal } from 'antd';
 import 'antd/dist/antd.css'
-
-let socket
+import { useRouter } from 'next/router';
 
 export default function Home() {
-
-  const [players, setPlayer] = useState([])
-  const [id, setId] = useState('')
-  const [enemy, setEnemy] = useState('')
-  const [room, setRoom] = useState('')
-  const [isLogin, setIsLogin] = useState(false)
-
-  //初始化socket
-  useEffect(() => {
-    socketInitializer();
-  }, [socket]);
-
-  //form相关
+  const router = useRouter()
+  const [ip, setIp] = useState('http://localhost:3000/api')
+  const getInstantIP = (e) => {
+    setIp(e.target.value)
+  }
   const { 
-    register, 
+    register, // register用于注册input,以便验证是否填了
     handleSubmit, 
     formState:{errors}
   } = useForm() 
 
-  //点击login 
-  const login = (data) => {
-    // console.log(data.room)
-    setId(data.id)
-    setRoom(data.room) //保存room信息
-    socket.emit('join_room', data.room) //加入room
-    socket.emit('PlayerJoin',{id: data.id, room: data.room}) 
-    setIsLogin(true)
-  } 
-
-  const socketInitializer = async () => {
-    //连接到后端
-    await fetch("/api/socket")
-    socket = io()
-    //监听消息，新用户加入之后对返回的用户列表进行处理
-    socket.on("newPlayerComeIn", (player) => {
-      console.log(player)
-      //如果只有一个用户且为自己的话显示等待
-      if(player.length == 1 && player[0] == id) {
-        setEnemy('wait')
-        //如果有两个用户把不是自己的那个设置为enemy
-      } else if(player.length === 2) {
-        player.map(pl => {
-          if(pl != id) {
-            setEnemy(pl)
-          }
-        })
-      }
-    })
+  const welcome = async () => {
+    const msg =  await getMsg()
+    console.log(msg)
+     Modal.success({
+       content: msg,
+     });
+   };  
+  const getMsg = async () => { 
+    try {
+      console.log(ip)
+      const res = await axios.get(`${ip}/ping`)
+      return res.data.data.msg
+    } catch {
+      err => console.log(err)
+    }
   }
-
+  //点击提交登录
+  const login = async (data) => {
+    let formedData = {
+      id: data.id
+    }
+    try {
+      const res = await axios.post(`${data.ip}/join`, formedData)
+      if (res.data.code === 0) {
+        const token = res.data.data.user_token
+        if(token) {
+          router.push('/game')
+        }
+        console.log(res)
+      } else if(res.data.code === 100){
+        Modal.warning({
+          content: 'QAQ抱歉了，房间里已经有两个人在博弈了，麻烦同学稍等下~',
+        });
+      } else if(res.data.code === 102) {
+        Modal.success({
+          content: '恭喜同学成功进入对局，但请等下对局的小伙伴上线哦',
+        });
+      }
+    } catch {
+      err => console.log(err)
+    }
+  }
   return (
-    <div>
-    {
-    !isLogin ? (
     <div className="h-screen grid place-content-center
     bg-[url('../static/BG.jpeg')] bg-cover">
       <Head>
@@ -70,14 +70,28 @@ export default function Home() {
       </Head>
       {/* form毛玻璃效果, hover时更加模糊，纵列flex布局 */}
 
-      <form className='w-[26rem] flex flex-col shadow border-none px-10 py-16
+      <form className='w-[26rem] flex flex-col shadow border-none px-9 py-14
         rounded-2xl backdrop-blur-md bg-gray-300/20 hover:bg-white/20 backdrop-opacity-95 hover:backdrop-opacity-100 transition ease-in-out delay-300'
         onSubmit={handleSubmit(login)}  
       >
-        <h1 className='text-2xl font-medium text-gray-200'>请输入昵称和房间号哦</h1>
+        <h1 className='text-2xl font-medium text-gray-200'>请输入服务器IP和用户名哦</h1>
         <hr className='py-3 mt-2'/>
         <label className='block mb-5'>
-          <span className='text-white'>昵称</span>
+          <span className='text-white'>服务器 IP</span>
+          {/* hover时input框背景渐变 focus时出现ring */}
+          <input
+            {...register('ip', { required: true})}
+            onChange={getInstantIP}
+            defaultValue='http://localhost:3000/api'
+            className='border shadow rounded py-2 px-3 block w-full mt-1
+              ring-blue-400 outline-none focus:ring transition ease-in-out delay-150
+              backdrop-opacity-80 bg-white/70 hover:bg-white/100 backdrop-blur-xl'
+            placeholder='https://localhost:3000/api'
+            type='text'
+          />
+        </label>
+        <label className='block mb-10'>
+          <span className='text-white'>用户名</span>
           <input
             {...register('id', { required: true})}
             className='border shadow rounded py-2 px-3 block w-full mt-1
@@ -87,82 +101,34 @@ export default function Home() {
             type='text'
           />
         </label>
-        <label className='block mb-10'>
-          <span className='text-white'>房间号</span>
-          <input
-            {...register('room', { required: true})}
-            className='border shadow rounded py-2 px-3 block w-full mt-1
-              ring-blue-400 outline-none focus:ring transition ease-in-out delay-150
-              backdrop-opacity-80 bg-white/70 hover:bg-white/100 backdrop-blur-xl'
-            placeholder='需要和对局的小伙伴输入相同的房间号哦'
-            type='text'
+        <div className='flex justify-center space-x-5'>
+          <input 
+            type="submit" 
+            value='开始博弈'
+            className='shadow mx-auto bg-red-500 hover:bg-red-700 transition ease-in-out delay-200
+            focus:outline-none text-white font-bold py-2 px-4 rounded cursor-pointer w-1/2 h-10'		
           />
-        </label>
-        <input 
-          type="submit" 
-          value='开始博弈'
-          className='shadow mx-auto bg-red-500 hover:bg-red-700 transition ease-in-out delay-200
-          focus:outline-none text-white font-bold py-2 px-4 rounded cursor-pointer w-1/2 h-10'		
-        />
+          <Button
+            onClick={welcome}
+            className='shadow border py-2 px-4 rounded text-white decoration-0 font-bold w-1/2
+              focus:outline-none transition ease-in-out delay-200
+              h-10 border-none backdrop-opacity-80 bg-red-500  hover:bg-red-700 backdrop-blur-xl' 
+            >
+            检查通信
+          </Button>
+        </div>
           {/* 对于提交的form数据进行验证，name和id必须要填 */}
+        {errors.ip && (
+          <span className='text-red-700 block mt-4 text-lg font-bold'> 
+            - 啊 服务器地址你不写的吗
+          </span>
+        )}
         {errors.id && (
           <span className='text-red-700 block text-lg font-bold mt-4'> 
             - 啊 用户名也要写的唉
           </span>
         )}
-        {errors.room && (
-          <span className='text-red-700 block text-lg font-bold mt-4'> 
-            - 啊 还有房间号啊
-          </span>
-        )}
       </form>
     </div>
-    ):(
-      <div 
-        className="h-screen 
-        bg-[url('../static/BG.jpeg')] bg-cover"
-      >
-        <div className="flex space-x-5 w-full text-xl font-semibold p-6 
-        shadow-2xl backdrop-opacity-80 bg-black/30 backdrop-blur-md
-        transition ease-in-out delay-300 border-b-indigo-500
-        bg-gradient-to-b from-black/90 h-1/6 items-center
-        ">
-          <div className="text-white"> 欢迎 {id} 同学进入房间 {room}</div>
-          <div className="text-white">
-            {
-              enemy === 'wait'? 
-                <div>但也请等下小伙伴进入房间哦... ...</div> : 
-                <div>你的对手是 {enemy} 加油哦</div>
-            }
-          </div>
-        </div>
-        <div className="flex items-center justify-center h-5/6">
-        <div className='w-[26rem] flex flex-col shadow border-none px-9 py-14 
-        rounded-2xl backdrop-blur-md bg-gray-300/20 hover:bg-white/20 backdrop-opacity-95 hover:backdrop-opacity-100 transition ease-in-out delay-300'
-        >
-            <h1 className='text-2xl font-medium text-gray-200 mx-auto'>现在正在进行第 1 轮博弈</h1>
-            <div className='mt-5 flex space-x-6 justify-center'>
-                <button
-                    className='shadow border p-8 py-6 rounded-full text-white decoration-0 font-bold w-1/3
-										focus:outline-none transition ease-in-out delay-200 text-2xl
-										h-30 border-none backdrop-opacity-80 bg-green-500  hover:bg-green-700 backdrop-blur-xl' 
-                >
-                    我要<br/>坦白
-                </button>
-                <button
-                    className='shadow border p-8 py-6 rounded-full text-white decoration-0 font-bold w-1/3
-										focus:outline-none transition ease-in-out delay-200 text-2xl
-										h-30 border-none backdrop-opacity-80 bg-red-500  hover:bg-red-700 backdrop-blur-xl' 
-                >
-                    才不<br/>坦白
-                </button>
-            </div>
-
-        </div>
-        </div>
-      </div>
-    )
-  }
-  </div>
   )
 }
